@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendrier partagé – open-bot</title>
+<style>
+/* Base thème sombre dashboard */
+*{box-sizing:border-box}
+body{margin:0;background:#0f1115;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:20px;min-width:320px}
+/* En-tête */
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#171a21;border-radius:10px;padding:14px 16px;border:1px solid #262b36}
+header.top h1{font-size:20px;margin:0;flex:1;min-width:180px}
+.mois-nav{display:flex;align-items:center;gap:8px}
+.mois-nav strong{min-width:160px;text-align:center;text-transform:capitalize}
+button,.btn{background:#232936;border:1px solid #323a4a;color:#e5e7eb;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:14px}
+button:hover{background:#2b3343}
+button.primary,.btn.primary{background:#6366f1;border-color:#6366f1;color:#fff;font-weight:600}
+button.primary:hover{background:#5457e5}
+button.ghost{background:transparent}
+/* Bandeau d'état (API en erreur / démo) */
+.bandeau{display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;border:1px solid}
+.bandeau.err{display:block;background:#2b1a1e;border-color:#7f1d1d;color:#fca5a5}
+.bandeau.demo{display:block;background:#241f12;border-color:#78350f;color:#fcd34d}
+/* Mise en page */
+.layout{display:flex;gap:16px;margin-top:16px;align-items:flex-start}
+.cal-card{flex:2;background:#171a21;border:1px solid #262b36;border-radius:10px;padding:12px}
+.side{flex:1;min-width:300px;background:#171a21;border:1px solid #262b36;border-radius:10px;padding:12px}
+.side h2{margin:4px 0 10px;font-size:16px}
+/* Grille calendrier */
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.jour-nom{text-align:center;font-size:12px;color:#9ca3af;text-transform:uppercase;padding:6px 0}
+.jour{background:#0f1115;border:1px solid #262b36;border-radius:10px;min-height:96px;padding:6px;cursor:pointer;text-align:left;color:inherit}
+.jour:hover{border-color:#6366f1}
+.jour.autre{opacity:.38}
+.jour.auj{outline:2px solid #6366f1;background:#1a1e2b}
+.jour.sel{box-shadow:0 0 0 2px #6366f1 inset}
+.jour .num{font-weight:700;font-size:13px;margin-bottom:4px}
+.puce{display:flex;align-items:center;gap:6px;font-size:12px;background:#232936;border-radius:6px;padding:2px 6px;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.puce i{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.plus{font-size:12px;color:#9ca3af}
+/* Filtres */
+.filtres{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.filtres label{font-size:12px;color:#9ca3af;display:flex;flex-direction:column;gap:4px}
+.filtres input,.filtres select,.modal input,.modal select,.modal textarea{background:#0f1115;border:1px solid #323a4a;color:#e5e7eb;border-radius:10px;padding:7px 8px;font-size:14px;width:100%}
+.filtres .full{grid-column:1/-1}
+/* Liste événements */
+.liste{display:flex;flex-direction:column;gap:8px;max-height:640px;overflow:auto}
+.evt{background:#0f1115;border:1px solid #262b36;border-radius:10px;padding:8px 10px;position:relative}
+.evt .meta{display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;color:#fff}
+.evt h3{margin:6px 0 2px;font-size:14px}
+.evt p{margin:0;font-size:13px;color:#b6bcc8}
+.evt .actions{position:absolute;top:6px;right:6px;display:none;gap:6px}
+.evt:hover .actions{display:flex}
+.evt .actions button{padding:4px 8px;font-size:12px}
+.vide{color:#9ca3af;text-align:center;padding:20px 0;font-size:14px}
+/* Modale */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay.ouvert{display:flex}
+.modal{background:#171a21;border:1px solid #323a4a;border-radius:10px;padding:16px;width:100%;max-width:480px}
+.modal h2{margin:0 0 10px}
+.modal .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal label{font-size:13px;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.check{flex-direction:row!important;align-items:center;gap:8px!important}
+.check input{width:auto}
+.erreur{color:#f87171;font-size:13px;min-height:18px}
+.btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+/* Responsive : tablette (empile) */
+@media(max-width:900px){.layout{flex-direction:column}.cal-card,.side{width:100%}}
+/* Mobile : calendrier compact (points de couleur), actions toujours visibles, formulaire plein écran */
+@media(max-width:640px){
+ html{-webkit-text-size-adjust:100%}
+ .wrap{padding:10px}
+ header.top{padding:10px 12px;gap:8px}
+ header.top h1{font-size:17px;flex-basis:100%;min-width:0}
+ .mois-nav{width:100%;flex-wrap:wrap;gap:6px}
+ .mois-nav strong{min-width:0;flex:1;text-align:center;font-size:14px}
+ .mois-nav button{padding:7px 10px;font-size:13px}
+ #newBtn{flex-basis:100%}
+ .layout{gap:10px;margin-top:10px}
+ .grid{gap:3px}
+ .jour-nom{font-size:10px;padding:4px 0}
+ .jour{min-height:50px;padding:4px;border-radius:8px}
+ .jour .num{font-size:11px;margin-bottom:2px}
+ .puce{font-size:0;padding:2px;margin:2px 0;gap:0;justify-content:center}
+ .puce i{width:7px;height:7px}
+ .plus{font-size:10px}
+ .filtres{gap:6px}
+ .filtres input,.filtres select,.modal input,.modal select,.modal textarea{font-size:16px}
+ .side{padding:10px}
+ .liste{max-height:440px}
+ .evt{padding-right:8px}
+ .evt .actions{display:flex;position:static;margin-top:6px;justify-content:flex-end}
+ .overlay{align-items:flex-end;padding:0}
+ .modal{border-radius:14px 14px 0 0;max-width:none}
+ .btns button{flex:1;padding:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+<h1>Calendrier partagé</h1>
+<div class="mois-nav">
+<button id="prev" title="Mois précédent">‹</button>
+<strong id="moisLabel">—</strong>
+<button id="next" title="Mois suivant">›</button>
+<button id="today">Aujourd'hui</button>
+<button id="newBtn" class="primary">+ Nouvel événement</button>
+</div>
+</header>
+<div class="bandeau" id="bandeau"></div>
+
+<div class="layout">
+<!-- Calendrier mensuel -->
+<section class="cal-card">
+<div class="grid" id="nomsJours"></div>
+<div class="grid" id="grille"></div>
+</section>
+
+<!-- Panneau latéral -->
+<aside class="side">
+<h2>Événements <span id="compte" style="color:#9ca3af;font-weight:400"></span></h2>
+<div class="filtres">
+<label>Du <input type="date" id="fDu"></label>
+<label>Au <input type="date" id="fAu"></label>
+<label>Source <select id="fSource"><option value="">Toutes</option></select></label>
+<label>Recherche <input type="search" id="fQ" placeholder="titre, description…"></label>
+<button id="fReset" class="full">Réinitialiser</button>
+<div id="jourFiltre" class="full" style="font-size:13px;color:#a5b4fc"></div>
+</div>
+<div class="liste" id="liste"></div>
+</aside>
+</div>
+</div>
+
+<!-- Modale formulaire -->
+<div class="overlay" id="overlay">
+<form class="modal" id="form">
+<h2 id="formTitre">Nouvel événement</h2>
+<label>Titre* <input id="cTitre" required maxlength="200"></label>
+<label>Description <textarea id="cDesc" rows="2" maxlength="2000"></textarea></label>
+<div class="row">
+<label>Date début* <input type="date" id="cD1" required></label>
+<label>Heure début <input type="time" id="cH1" value="09:00"></label>
+</div>
+<div class="row">
+<label>Date fin* <input type="date" id="cD2" required></label>
+<label>Heure fin <input type="time" id="cH2" value="10:00"></label>
+</div>
+<label class="check"><input type="checkbox" id="cAll"> Journée entière</label>
+<div class="row">
+<label>Source <input id="cSource" list="lSources" value="manuel" maxlength="40"><datalist id="lSources"></datalist></label>
+<label>Couleur <input type="color" id="cCouleur" value="#6366f1"></label>
+</div>
+<div class="erreur" id="err"></div>
+<div class="btns">
+<button type="button" id="cancel" class="ghost">Annuler</button>
+<button type="submit" class="primary">Enregistrer</button>
+</div>
+</form>
+</div>
+
+<script>
+// Couleurs par défaut des sources connues (le serveur en assigne une aux nouvelles)
+const COULEURS={manuel:"#6366f1","fb-message-guardian":"#3b82f6","price-scout":"#22c55e","prompt-shield":"#f59e0b"};
+
+// État
+let events=[];         // événements chargés (filtres courants)
+let sources=[];        // [{id,couleur}]
+let affAnnee,affMois;  // mois affiché
+let jourSel=null;      // AAAA-MM-JJ sélectionné par clic
+let editId=null;       // id en édition
+let demo=false;        // API injoignable -> données de démo
+const $=id=>document.getElementById(id);
+const grille=$("grille"),liste=$("liste"),moisLabel=$("moisLabel");
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function bandeau(mode,msg){
+ const b=$("bandeau");
+ b.className="bandeau"+(mode?" "+mode:"");
+ b.textContent=msg||"";
+ b.style.display=msg?"block":"none";
+}
+
+// Utilitaires date
+function pad(n){return String(n).padStart(2,"0")}
+function isoJour(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function dateDebut(e){return new Date(e.d1+"T"+(e.allDay?"00:00":(e.h1||"00:00"))+":00")}
+function dateFin(e){return new Date(e.d2+"T"+(e.allDay?"23:59":(e.h2||"23:59"))+":00")}
+function fdate(iso){const [a,m,j]=iso.split("-");return j+"/"+m+"/"+a}
+function joli(e){ // libellé date/heure
+ if(e.allDay) return fdate(e.d1)+(e.d2!==e.d1?" → "+fdate(e.d2):"")+" · journée entière";
+ const memeJour=e.d1===e.d2;
+ const mm=fdate(e.d1).slice(0,5);
+ return memeJour? mm+" "+(e.h1||"")+" → "+(e.h2||"")
+                : mm+" "+(e.h1||"")+" → "+fdate(e.d2).slice(0,5)+" "+(e.h2||"");
+}
+
+// Démo : utilisée SEULEMENT si l'API est injoignable (page ouverte hors serveur)
+function demoEvents(){
+ const now=new Date(),y=now.getFullYear(),m=pad(now.getMonth()+1);
+ const y2=m==="12"?y+1:y, m2=m==="12"?"01":pad(+m+1);
+ return [
+  {id:"d1",titre:"Revue scans gardien",desc:"Vérifier les réponses auto du week-end.",d1:`${y}-${m}-05`,h1:"09:30",d2:`${y}-${m}-05`,h2:"10:30",allDay:false,source:"fb-message-guardian",couleur:COULEURS["fb-message-guardian"]},
+  {id:"d2",titre:"Veille prix Orange Pi",desc:"Comparer kits gpio-companion.",d1:`${y}-${m}-08`,h1:"14:00",d2:`${y}-${m}-08`,h2:"15:00",allDay:false,source:"price-scout",couleur:COULEURS["price-scout"]},
+  {id:"d3",titre:"Marché Lac-Mégantic",desc:"Stand M2Tech, démos.",d1:`${y}-${m}-12`,h1:null,d2:`${y}-${m}-13`,h2:null,allDay:true,source:"manuel",couleur:COULEURS.manuel},
+  {id:"d4",titre:"Rejouer corpus prompt-shield",desc:"Tests anti-injection.",d1:`${y}-${m}-20`,h1:"10:00",d2:`${y}-${m}-20`,h2:"11:00",allDay:false,source:"prompt-shield",couleur:COULEURS["prompt-shield"]},
+  {id:"d5",titre:"Rencontre Coralie",desc:"Préparer visuels crewneck.",d1:`${y2}-${m2}-07`,h1:null,d2:`${y2}-${m2}-07`,h2:null,allDay:true,source:"manuel",couleur:COULEURS.manuel}
+ ];
+}
+
+// Charger les événements depuis l'API selon les filtres courants
+async function charger(){
+ const p=new URLSearchParams();
+ if($("fDu").value) p.set("from",$("fDu").value);
+ if($("fAu").value) p.set("to",$("fAu").value);
+ if($("fSource").value) p.set("source",$("fSource").value);
+ const q=$("fQ").value.trim(); if(q) p.set("q",q);
+ if(jourSel){p.set("from",jourSel);p.set("to",jourSel)}
+ try{
+  const r=await fetch("api/events?"+p.toString(),{headers:{Accept:"application/json"}});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  events=j.events||[];
+  if(demo){demo=false;bandeau(null,"")}
+ }catch(ex){
+  if(!demo){demo=true;bandeau("demo","API injoignable — données de démonstration (lecture seule).")}
+  events=demoEvents();
+ }
+ renduCal();renduListe();
+}
+
+// Rendu calendrier (les filtres sont déjà appliqués côté serveur)
+function renduCal(){
+ const prem=new Date(affAnnee,affMois,1);
+ moisLabel.textContent=prem.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+ $("nomsJours").innerHTML=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(j=>`<div class="jour-nom">${j}</div>`).join("");
+ const decal=(prem.getDay()+6)%7; // lundi=0
+ const nbJ=new Date(affAnnee,affMois+1,0).getDate();
+ const nbPrev=new Date(affAnnee,affMois,0).getDate();
+ const auj=isoJour(new Date());
+ let html="";
+ for(let i=0;i<42;i++){
+  const n=i-decal+1; let d,m2=affMois,y2=affAnnee,autre=false;
+  if(n<1){d=nbPrev+n;m2=affMois-1;autre=true}
+  else if(n>nbJ){d=n-nbJ;m2=affMois+1;autre=true}
+  else d=n;
+  if(m2<0){m2=11;y2--} if(m2>11){m2=0;y2++}
+  const iso=`${y2}-${pad(m2+1)}-${pad(d)}`;
+  const ev=events.filter(e=>e.d1<=iso&&e.d2>=iso);
+  const puces=ev.slice(0,3).map(e=>`<div class="puce" title="${esc(e.titre)}"><i style="background:${esc(e.couleur)}"></i>${esc(e.titre)}</div>`).join("");
+  const plus=ev.length>3?`<div class="plus">+${ev.length-3} autres</div>`:"";
+  const cls="jour"+(autre?" autre":"")+(iso===auj?" auj":"")+(iso===jourSel?" sel":"");
+  html+=`<button class="${cls}" data-j="${iso}"><div class="num">${d}</div>${puces}${plus}</button>`;
+  if(i>=decal+nbJ-1 && (i+1)%7===0) break; // coupe les semaines vides
+ }
+ grille.innerHTML=html;
+ grille.querySelectorAll(".jour").forEach(b=>b.onclick=()=>{
+  jourSel=(jourSel===b.dataset.j)?null:b.dataset.j;
+  $("jourFiltre").textContent=jourSel?("Jour : "+jourSel+" — cliquer à nouveau pour annuler"):"";
+  if(jourSel){$("cD1").value=jourSel;$("cD2").value=jourSel}
+  charger();
+ });
+}
+
+// Rendu liste latérale
+function renduListe(){
+ $("compte").textContent=`(${events.length})`;
+ if(!events.length){liste.innerHTML=`<div class="vide">Aucun événement.</div>`;return}
+ liste.innerHTML=events.map(e=>`
+  <div class="evt">
+   <div class="actions"><button data-m="${e.id}">Modifier</button><button data-s="${e.id}">Suppr.</button></div>
+   <div class="meta"><span class="badge" style="background:${esc(e.couleur)}">${esc(e.source)}</span><span>${esc(joli(e))}</span></div>
+   <h3>${esc(e.titre)}</h3><p>${esc(e.desc||"")}</p>
+  </div>`).join("");
+ liste.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>ouvrirForm(b.dataset.m));
+ liste.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>supprimer(b.dataset.s));
+}
+
+async function api(method,url,body){
+ const r=await fetch(url,{method,headers:{"content-type":"application/json",Accept:"application/json"},body:body?JSON.stringify(body):undefined});
+ const j=await r.json().catch(()=>({ok:false,erreur:"réponse illisible"}));
+ if(!r.ok||j.ok===false) throw new Error(j.erreur||("HTTP "+r.status));
+ return j;
+}
+
+async function supprimer(id){
+ if(demo){bandeau("err","Mode démo : suppression désactivée.");return}
+ try{ await api("DELETE","api/events/"+id); charger(); }
+ catch(ex){ bandeau("err","Suppression impossible : "+ex.message); }
+}
+
+// Sources connues -> filtre + datalist du formulaire
+async function initSources(){
+ try{
+  const j=await api("GET","api/sources");
+  sources=j.sources||[];
+ }catch(ex){ sources=Object.keys(COULEURS).map(id=>({id,couleur:COULEURS[id]})); }
+ $("fSource").innerHTML=`<option value="">Toutes</option>`+sources.map(s=>`<option value="${esc(s.id)}">${esc(s.id)}</option>`).join("");
+ $("lSources").innerHTML=sources.map(s=>`<option value="${esc(s.id)}">`).join("");
+}
+function couleurDe(id){return (sources.find(s=>s.id===id)||{}).couleur || COULEURS[id] || "#6366f1"}
+
+// Modale
+function ouvrirForm(id){
+ editId=id||null;
+ $("err").textContent="";
+ $("formTitre").textContent=id?"Modifier l'événement":"Nouvel événement";
+ if(id){
+  const e=events.find(x=>x.id===id);
+  $("cTitre").value=e.titre;$("cDesc").value=e.desc||"";
+  $("cD1").value=e.d1;$("cH1").value=e.h1||"09:00";
+  $("cD2").value=e.d2;$("cH2").value=e.h2||"10:00";
+  $("cAll").checked=!!e.allDay;$("cSource").value=e.source;$("cCouleur").value=e.couleur;
+ }else{
+  $("form").reset();$("cSource").value="manuel";$("cCouleur").value=couleurDe("manuel");
+  const t=new Date(); const jour=jourSel||isoJour(t);
+  $("cD1").value=jour;$("cD2").value=jour;
+ }
+ $("cH1").disabled=$("cH2").disabled=$("cAll").checked;
+ $("overlay").classList.add("ouvert");
+}
+function fermerForm(){$("overlay").classList.remove("ouvert")}
+
+// Événements UI
+$("prev").onclick=()=>{affMois--;if(affMois<0){affMois=11;affAnnee--}renduCal()};
+$("next").onclick=()=>{affMois++;if(affMois>11){affMois=0;affAnnee++}renduCal()};
+$("today").onclick=()=>{const n=new Date();affAnnee=n.getFullYear();affMois=n.getMonth();jourSel=null;$("jourFiltre").textContent="";charger()};
+$("newBtn").onclick=()=>ouvrirForm(null);
+$("cancel").onclick=fermerForm;
+$("overlay").onclick=e=>{if(e.target.id==="overlay")fermerForm()};
+let deb;
+["fDu","fAu","fSource"].forEach(id=>$(id).addEventListener("input",charger));
+$("fQ").addEventListener("input",()=>{clearTimeout(deb);deb=setTimeout(charger,250)});
+$("fReset").onclick=()=>{$("fDu").value="";$("fAu").value="";$("fSource").value="";$("fQ").value="";jourSel=null;$("jourFiltre").textContent="";charger()};
+$("cSource").addEventListener("input",e=>{ // couleur auto selon la source
+ $("cCouleur").value=couleurDe(e.target.value.trim()||"manuel");
+});
+$("cAll").addEventListener("change",e=>{
+ $("cH1").disabled=e.target.checked;$("cH2").disabled=e.target.checked;
+});
+$("form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const v={titre:$("cTitre").value.trim(),desc:$("cDesc").value.trim(),d1:$("cD1").value,h1:$("cAll").checked?null:$("cH1").value||null,d2:$("cD2").value,h2:$("cAll").checked?null:$("cH2").value||null,allDay:$("cAll").checked,source:($("cSource").value.trim()||"manuel"),couleur:$("cCouleur").value};
+ if(dateFin(v)<dateDebut(v)){$("err").textContent="La fin doit être après le début.";return}
+ if(demo){$("err").textContent="Mode démo : enregistrement désactivé.";return}
+ try{
+  if(editId) await api("PUT","api/events/"+editId,v);
+  else await api("POST","api/events",v);
+  fermerForm();charger();
+ }catch(ex){$("err").textContent=ex.message}
+});
+
+// Init
+(async()=>{
+ const n=new Date();affAnnee=n.getFullYear();affMois=n.getMonth();
+ await initSources();
+ await charger();
+})();
+</script>
+</body>
+</html>
