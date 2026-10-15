@@ -3,69 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <title>Calendrier partagé – open-bot</title>
+<script>
+/* Thème : clair par défaut, sombre selon le navigateur ; override ?theme=light|dark */
+(function(){
+ var q=new URLSearchParams(location.search).get("theme");
+ var mq=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+ var applique=function(){document.documentElement.setAttribute("data-theme",q||(mq&&mq.matches?"dark":"light"))};
+ applique();
+ if(mq){var ch=function(){if(!q)applique()};mq.addEventListener?mq.addEventListener("change",ch):mq.addListener&&mq.addListener(ch)}
+})();
+</script>
 <style>
-/* Base thème sombre dashboard */
+/* Thèmes : clair par défaut (:root), sombre via l'attribut data-theme (règle dark+light) */
 *{box-sizing:border-box}
-body{margin:0;background:#0f1115;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+:root{
+ --bg:#f5f6f8;--panel:#ffffff;--panel2:#eef0f4;--sel:#eef0ff;
+ --border:#d9dde5;--border2:#c6ccda;
+ --text:#1f2430;--soft:#4b5563;--muted:#5b6472;
+ --accent:#6366f1;--accent-hover:#5457e5;--accent-text:#4338ca;
+ --btn-bg:#ffffff;--btn-border:#c9cedb;--btn-hover:#e9ecf2;
+ --err-bg:#fdecec;--err-border:#f2b8b8;--err-text:#9f1d1d;
+ --demo-bg:#fdf3dd;--demo-border:#e5c57f;--demo-text:#7c5205;
+ --overlay:rgba(15,17,21,.45);
+ color-scheme:light;
+}
+html[data-theme="dark"]{--bg:#0f1115;--panel:#171a21;--panel2:#0f1115;--sel:#1a1e2b}
+html[data-theme="dark"]{--border:#262b36;--border2:#323a4a}
+html[data-theme="dark"]{--text:#e5e7eb;--soft:#b6bcc8;--muted:#9ca3af}
+html[data-theme="dark"]{--accent:#6366f1;--accent-hover:#5457e5;--accent-text:#a5b4fc}
+html[data-theme="dark"]{--btn-bg:#232936;--btn-border:#323a4a;--btn-hover:#2b3343}
+html[data-theme="dark"]{--err-bg:#2b1a1e;--err-border:#7f1d1d;--err-text:#fca5a5}
+html[data-theme="dark"]{--demo-bg:#241f12;--demo-border:#78350f;--demo-text:#fcd34d}
+html[data-theme="dark"]{--overlay:rgba(0,0,0,.6);color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 .wrap{max-width:1200px;margin:0 auto;padding:20px;min-width:320px}
 /* En-tête */
-header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#171a21;border-radius:10px;padding:14px 16px;border:1px solid #262b36}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--panel);border-radius:10px;padding:14px 16px;border:1px solid var(--border)}
 header.top h1{font-size:20px;margin:0;flex:1;min-width:180px}
 .mois-nav{display:flex;align-items:center;gap:8px}
 .mois-nav strong{min-width:160px;text-align:center;text-transform:capitalize}
-button,.btn{background:#232936;border:1px solid #323a4a;color:#e5e7eb;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:14px}
-button:hover{background:#2b3343}
-button.primary,.btn.primary{background:#6366f1;border-color:#6366f1;color:#fff;font-weight:600}
-button.primary:hover{background:#5457e5}
+button,.btn{background:var(--btn-bg);border:1px solid var(--btn-border);color:var(--text);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:14px}
+button:hover{background:var(--btn-hover)}
+button.primary,.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.primary:hover{background:var(--accent-hover)}
 button.ghost{background:transparent}
 /* Bandeau d'état (API en erreur / démo) */
 .bandeau{display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;border:1px solid}
-.bandeau.err{display:block;background:#2b1a1e;border-color:#7f1d1d;color:#fca5a5}
-.bandeau.demo{display:block;background:#241f12;border-color:#78350f;color:#fcd34d}
+.bandeau.err{display:block;background:var(--err-bg);border-color:var(--err-border);color:var(--err-text)}
+.bandeau.demo{display:block;background:var(--demo-bg);border-color:var(--demo-border);color:var(--demo-text)}
 /* Mise en page */
 .layout{display:flex;gap:16px;margin-top:16px;align-items:flex-start}
-.cal-card{flex:2;background:#171a21;border:1px solid #262b36;border-radius:10px;padding:12px}
-.side{flex:1;min-width:300px;background:#171a21;border:1px solid #262b36;border-radius:10px;padding:12px}
+.cal-card{flex:2;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
+.side{flex:1;min-width:300px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
 .side h2{margin:4px 0 10px;font-size:16px}
 /* Grille calendrier */
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.jour-nom{text-align:center;font-size:12px;color:#9ca3af;text-transform:uppercase;padding:6px 0}
-.jour{background:#0f1115;border:1px solid #262b36;border-radius:10px;min-height:96px;padding:6px;cursor:pointer;text-align:left;color:inherit}
-.jour:hover{border-color:#6366f1}
+.jour-nom{text-align:center;font-size:12px;color:var(--muted);text-transform:uppercase;padding:6px 0}
+.jour{background:var(--panel2);border:1px solid var(--border);border-radius:10px;min-height:96px;padding:6px;cursor:pointer;text-align:left;color:var(--text)}
+.jour:hover{border-color:var(--accent)}
 .jour.autre{opacity:.38}
-.jour.auj{outline:2px solid #6366f1;background:#1a1e2b}
-.jour.sel{box-shadow:0 0 0 2px #6366f1 inset}
+.jour.auj{outline:2px solid var(--accent);background:var(--sel)}
+.jour.sel{box-shadow:0 0 0 2px var(--accent) inset}
 .jour .num{font-weight:700;font-size:13px;margin-bottom:4px}
-.puce{display:flex;align-items:center;gap:6px;font-size:12px;background:#232936;border-radius:6px;padding:2px 6px;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.puce{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--btn-bg);border-radius:6px;padding:2px 6px;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .puce i{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
-.plus{font-size:12px;color:#9ca3af}
+.plus{font-size:12px;color:var(--muted)}
 /* Filtres */
 .filtres{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.filtres label{font-size:12px;color:#9ca3af;display:flex;flex-direction:column;gap:4px}
-.filtres input,.filtres select,.modal input,.modal select,.modal textarea{background:#0f1115;border:1px solid #323a4a;color:#e5e7eb;border-radius:10px;padding:7px 8px;font-size:14px;width:100%}
+.filtres label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.filtres input,.filtres select,.modal input,.modal select,.modal textarea{background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:7px 8px;font-size:14px;width:100%}
+select option{background:var(--panel);color:var(--text)}
 .filtres .full{grid-column:1/-1}
 /* Liste événements */
 .liste{display:flex;flex-direction:column;gap:8px;max-height:640px;overflow:auto}
-.evt{background:#0f1115;border:1px solid #262b36;border-radius:10px;padding:8px 10px;position:relative}
-.evt .meta{display:flex;align-items:center;gap:8px;font-size:12px;color:#9ca3af}
+.evt{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;position:relative}
+.evt .meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 .badge{font-size:11px;padding:2px 8px;border-radius:20px;color:#fff}
 .evt h3{margin:6px 0 2px;font-size:14px}
-.evt p{margin:0;font-size:13px;color:#b6bcc8}
+.evt p{margin:0;font-size:13px;color:var(--soft)}
 .evt .actions{position:absolute;top:6px;right:6px;display:none;gap:6px}
 .evt:hover .actions{display:flex}
 .evt .actions button{padding:4px 8px;font-size:12px}
-.vide{color:#9ca3af;text-align:center;padding:20px 0;font-size:14px}
+.vide{color:var(--muted);text-align:center;padding:20px 0;font-size:14px}
 /* Modale */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
 .overlay.ouvert{display:flex}
-.modal{background:#171a21;border:1px solid #323a4a;border-radius:10px;padding:16px;width:100%;max-width:480px}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:16px;width:100%;max-width:480px}
 .modal h2{margin:0 0 10px}
 .modal .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .modal label{font-size:13px;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
 .check{flex-direction:row!important;align-items:center;gap:8px!important}
 .check input{width:auto}
-.erreur{color:#f87171;font-size:13px;min-height:18px}
+.erreur{color:var(--err-text);font-size:13px;min-height:18px}
 .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 /* Responsive : tablette (empile) */
 @media(max-width:900px){.layout{flex-direction:column}.cal-card,.side{width:100%}}
@@ -122,14 +153,14 @@ button.ghost{background:transparent}
 
 <!-- Panneau latéral -->
 <aside class="side">
-<h2>Événements <span id="compte" style="color:#9ca3af;font-weight:400"></span></h2>
+<h2>Événements <span id="compte" style="color:var(--muted);font-weight:400"></span></h2>
 <div class="filtres">
 <label>Du <input type="date" id="fDu"></label>
 <label>Au <input type="date" id="fAu"></label>
 <label>Source <select id="fSource"><option value="">Toutes</option></select></label>
 <label>Recherche <input type="search" id="fQ" placeholder="titre, description…"></label>
 <button id="fReset" class="full">Réinitialiser</button>
-<div id="jourFiltre" class="full" style="font-size:13px;color:#a5b4fc"></div>
+<div id="jourFiltre" class="full" style="font-size:13px;color:var(--accent-text)"></div>
 </div>
 <div class="liste" id="liste"></div>
 </aside>
