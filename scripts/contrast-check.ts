@@ -8,18 +8,35 @@ const html = await (await fetch(`http://127.0.0.1:${PORT}/`)).text();
 
 function varsOf(block: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const m of block.matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})/g)) out[m[1]] = m[2];
+  for (const m of block.matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{3,8})/g)) {
+    let hex = m[2].slice(1);
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    if (hex.length === 8) hex = hex.slice(0, 6);
+    out[m[1]] = "#" + hex;
+  }
   return out;
 }
-const css = html.match(/<style>([\s\S]*?)<\/style>/)![1];
-// premier SÉLECTEUR du bloc sombre (l'accolade évite les faux positifs dans les commentaires)
-const darkAt = css.indexOf('html[data-theme="dark"]{');
-if (darkAt < 0) {
+// HTML bundle (install figé) : CSS inliné dans <style>. Checkout local (bun --hot) :
+// feuille liée /_bun/asset/*.css — on la suit.
+let css: string | undefined = html.match(/<style>([\s\S]*?)<\/style>/)?.[1];
+if (!css) {
+  const link = html.match(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/)?.[1]
+    ?? html.match(/<link[^>]+href="([^"]+)"[^>]+rel="stylesheet"/)?.[1];
+  if (!link) {
+    console.error("✗ ni <style> ni feuille liée dans la page servie");
+    process.exit(1);
+  }
+  css = await (await fetch(`http://127.0.0.1:${PORT}${link}`)).text();
+}
+// premier SÉLECTEUR du bloc sombre (l'accolade évite les faux positifs dans les commentaires ;
+// espace toléré — le minifier/pretty-printer de Bun peut insérer une espace avant l'accolade)
+const darkMatch = css.match(/html\[data-theme="dark"\]\s*\{/);
+if (!darkMatch || darkMatch.index === undefined) {
   console.error("✗ bloc html[data-theme=\"dark\"] introuvable — page mono-thème ?");
   process.exit(1);
 }
-const light = varsOf(css.slice(0, darkAt));
-const dark = varsOf(css.slice(darkAt));
+const light = varsOf(css.slice(0, darkMatch.index));
+const dark = varsOf(css.slice(darkMatch.index));
 
 function lum(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {

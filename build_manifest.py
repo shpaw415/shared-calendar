@@ -15,7 +15,7 @@ manifest = {
     "$schema": "/home/agent/.config/opencode/skills/plugin/open-bot.plugin.schema.json",
     "id": "shared-calendar",
     "name": "Calendrier partagé",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "Calendrier partagé open-bot : les autres plugins (price-scout, fb-message-guardian…) y ajoutent, modifient et suppriment événements et rendez-vous via un CLI dédié, et l'utilisateur tout voit et édite dans l'onglet Calendrier du dashboard (vue mensuelle + liste filtrable par dates, source et recherche).",
     "author": "shpaw415",
     "repo": "shpaw415/shared-calendar",
@@ -34,11 +34,13 @@ manifest = {
         }
     ],
     "files": [
-        {"name": "server.js", "source": "server/server.js", "exec": True},
-        {"name": "index.html", "source": "server/index.html"},
+        {"name": "server.ts", "source": "server/server.ts", "exec": True},
+        {"name": "index.html", "source": "server/index.html", "exec": False},
+        {"name": "app.ts", "source": "server/app.ts", "exec": False},
+        {"name": "styles.css", "source": "server/styles.css", "exec": False},
     ],
     "dashboard": {
-        "pages": {"entry": "server.js"},
+        "pages": {"entry": "server.ts", "ui": "server/index.html"},
         "tabs": [
             {"id": "calendrier", "title": "Calendrier", "kind": "app"}
         ],
