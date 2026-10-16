@@ -1,5 +1,5 @@
 /**
- * shared-calendar — audit de contraste WCAG des deux thèmes (règle Justin : dark + light).
+ * shared-calendar — audit de contraste WCAG des deux thèmes (règle : dark + light).
  * Extrait les variables CSS de la page servie et vérifie les paires texte/fond (min 4.5).
  * Usage : UI_PORT=4741 bun scripts/contrast-check.ts
  */

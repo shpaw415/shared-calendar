@@ -21,7 +21,7 @@ ob-plugin-shared-calendar-cal add --titre "Suivre devis D Bureau" \
   --source price-scout --par plugin:price-scout
 
 # journée entière (date seule = journée entière)
-ob-plugin-shared-calendar-cal add --titre "Marché Lac-Mégantic" --date 2026-10-25 --desc "Stand M2Tech"
+ob-plugin-shared-calendar-cal add --titre "Marché municipal" --date 2026-10-25 --desc "Kiosque communautaire"
 ```
 
 - `--source` : nom du plugin à l'origine (`price-scout`, `fb-message-guardian`,

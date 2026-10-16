@@ -24,4 +24,4 @@ dashboard pour l'utilisateur.
   ~/plugins-create/shared-calendar && ob-plugin install --path
   ~/plugins-create/shared-calendar`.
 
-Publication marketplace réservée à Justin (persona Créateur de plugins).
+Publication marketplace réservée au propriétaire du desktop.

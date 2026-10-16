@@ -15,9 +15,9 @@ manifest = {
     "$schema": "/home/agent/.config/opencode/skills/plugin/open-bot.plugin.schema.json",
     "id": "shared-calendar",
     "name": "Calendrier partagé",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Calendrier partagé open-bot : les autres plugins (price-scout, fb-message-guardian…) y ajoutent, modifient et suppriment événements et rendez-vous via un CLI dédié, et l'utilisateur tout voit et édite dans l'onglet Calendrier du dashboard (vue mensuelle + liste filtrable par dates, source et recherche).",
-    "author": "Justin Hallé",
+    "author": "shpaw415",
     "repo": "shpaw415/shared-calendar",
     "category": "productivity",
     "tags": [
