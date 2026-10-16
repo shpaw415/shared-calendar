@@ -51,21 +51,31 @@ async function fenetre(url: string, html: string, appJs: string): Promise<Window
 
 // ---------- 1+4. page, thèmes, bundle ----------
 const html = await (await fetch(BASE + "/?theme=dark")).text();
+// Install figé (marketplace) : le control plane bundle TOUT dans le HTML
+// autonome — app transpilée inline dans <script type="module">, CSS inline
+// dans <style>, aucun src. Checkout local (bun --hot) : src externes.
 const appSrc = html.match(/src="([^"]*_bun\/client\/[^"]+\.js)"/)?.[1]
   ?? html.match(/src="([^"]*app\.ts)"/)?.[1];
-if (!appSrc) { console.error("✗ script de l'app introuvable dans la page servie"); process.exit(1); }
-const appUrl = new URL(appSrc, BASE).toString();
-const appRes = await fetch(appUrl);
-ok(appRes.status === 200, `JS de l'app servi en 200 (${appUrl})`);
-const appJs = await appRes.text();
-const cssHref = html.match(/href="([^"]+\.css)"/)?.[1];
-const cssRes = cssHref ? await fetch(new URL(cssHref, BASE).toString()) : null;
-ok(!cssHref || cssRes!.status === 200, "CSS servi en 200");
-const taille = appJs.length + (cssRes ? Number(cssRes.headers.get("content-length") ?? (await cssRes.text()).length) : 0);
-ok(taille < 8 * 1024 * 1024, `bundle < 8 Mo (${(taille / 1024).toFixed(0)} Ko)`);
+let appJs: string;
+if (appSrc) {
+  const appUrl = new URL(appSrc, BASE).toString();
+  const appRes = await fetch(appUrl);
+  ok(appRes.status === 200, `JS de l'app servi en 200 (${appUrl})`);
+  appJs = await appRes.text();
+  const cssHref = html.match(/href="([^"]+\.css)"/)?.[1];
+  const cssRes = cssHref ? await fetch(new URL(cssHref, BASE).toString()) : null;
+  ok(!cssHref || cssRes!.status === 200, "CSS servi en 200");
+  const taille = appJs.length + (cssRes ? Number(cssRes.headers.get("content-length") ?? (await cssRes.text()).length) : 0);
+  ok(taille < 8 * 1024 * 1024, `bundle < 8 Mo (${(taille / 1024).toFixed(0)} Ko)`);
+} else {
+  appJs = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] ?? "";
+  ok(appJs.length > 1000, `app bundle inlinée dans le HTML (${(appJs.length / 1024).toFixed(0)} Ko de JS transpilé)`);
+  ok(html.length < 8 * 1024 * 1024, `bundle HTML autonome < 8 Mo (${(html.length / 1024).toFixed(0)} Ko)`);
+}
 
 const scriptPos = html.indexOf("<script>");
-const cssPos = html.indexOf('rel="stylesheet"');
+// bundle figé : CSS inline <style> ; checkout : link rel="stylesheet"
+const cssPos = html.search(/<style|rel="stylesheet"/);
 ok(scriptPos >= 0 && cssPos >= 0 && scriptPos < cssPos, "script de thème AVANT le CSS (zéro flash)");
 ok(/data-theme/.test(html) && !/theme-toggle|toggle-theme/i.test(html), "thème piloté par ?theme=/prefers, aucun toggle custom");
 
