@@ -142,10 +142,13 @@ function newId(): string {
 
 // ---------- routes ----------
 async function handleApi(req: Request, url: URL): Promise<Response> {
-  // Vérif douce du token : rejet seulement si un token est fourni et faux.
+  // Token de page : quand OPEN_BOT_PAGE_TOKEN est configuré, chaque appel API
+  // doit porter EXACTEMENT ce token (header x-open-bot-page-token) — aucune
+  // requête sans header n'est acceptée (pas de fallback littéral dev-preview).
+  // Non configuré = dev/preview local : pas de vérification. /healthz reste ouverte.
   if (TOKEN) {
-    const got = req.headers.get("x-open-bot-page-token");
-    if (got && got !== TOKEN) return jsonRes({ ok: false, erreur: "token invalide" }, 403);
+    const got = req.headers.get("x-open-bot-page-token") ?? "";
+    if (got !== TOKEN) return jsonRes({ ok: false, erreur: "token requis ou invalide" }, 401);
   }
 
   if (url.pathname === "/api/events" && req.method === "GET") {
