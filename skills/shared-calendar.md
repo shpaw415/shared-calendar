@@ -48,10 +48,40 @@ ob-plugin-shared-calendar-cal delete evt_xxxx
 
 ## Règles
 
-- Ne crée un événement que si l'utilisateur le demande ou si un flux plugin le
-  prévoit (ex. price-scout : échéance d'une alerte prix) — jamais de doublon :
-  vérifie avec `list --q` avant d'ajouter un titre similaire au même jour.
+### RÈGLE ABSOLUE — tout rendez-vous daté va au calendrier
+
+- Dès que l'utilisateur mentionne un événement daté — rendez-vous (médecin,
+  dentiste, garage…), réunion, anniversaire, échéance, livraison… — crée
+  l'événement au calendrier partagé, **même s'il ne dit pas « calendrier »** et
+  même s'il ne demande rien explicitement. C'est le comportement par défaut,
+  pas une option.
+- **Un cron ou un rappel ne remplace JAMAIS l'événement calendrier.** Un cron
+  peut s'y ajouter en complément (ex. rappel la veille), mais un rendez-vous
+  enregistré seulement en cron est un échec : l'utilisateur ne le verra jamais
+  dans l'onglet Calendrier.
+- Dates relatives : résous-les en date absolue `AAAA-MM-JJ` avant l'ajout
+  (« mercredi prochain », « la semaine des 4 jeudis ») et vérifie le jour de
+  la semaine calculé. Heure inconnue → crée l'événement « journée entière »
+  plutôt que de t'abstenir. Date ambiguë → demande-la, puis crée l'événement.
+  Ne jamais terminer le tour sans événement créé.
+- Vérifie après l'ajout : note l'id `evt_…` renvoyé et confirme avec
+  `list --q` que l'événement existe avant de dire « c'est enregistré ».
+- Jamais de doublon : vérifie avec `list --q` avant d'ajouter un titre
+  similaire au même jour.
 - Cite l'id `evt_…` renvoyé si l'utilisateur veut corriger ensuite.
 - La page dashboard (onglet Calendrier) reste la source de vérité visuelle ;
   ne décris pas les événements de mémoire, relance `list`.
 - Aucun secret ne transite par le calendrier.
+
+### Exemple
+
+« J'ai rendez-vous au médecin mercredi prochain » → calcule la date absolue,
+puis :
+
+```sh
+ob-plugin-shared-calendar-cal add --titre "Rendez-vous médecin" \
+  --date AAAA-MM-JJ --source manuel --par agent
+```
+
+Confirme avec l'id `evt_…`. Un cron de rappel est facultatif **en plus** —
+jamais à la place.

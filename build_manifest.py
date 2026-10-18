@@ -15,7 +15,7 @@ manifest = {
     "$schema": "/home/agent/.config/opencode/skills/plugin/open-bot.plugin.schema.json",
     "id": "shared-calendar",
     "name": "Calendrier partagé",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "Calendrier partagé open-bot : les autres plugins (price-scout, fb-message-guardian…) y ajoutent, modifient et suppriment événements et rendez-vous via un CLI dédié, et l'utilisateur tout voit et édite dans l'onglet Calendrier du dashboard (vue mensuelle + liste filtrable par dates, source et recherche).",
     "author": "shpaw415",
     "repo": "shpaw415/shared-calendar",
@@ -48,7 +48,7 @@ manifest = {
     "skills": [
         {
             "name": "shared-calendar",
-            "description": "Ajouter, lister, modifier ou supprimer des événements du calendrier partagé open-bot (rendez-vous, échéances, suivis) — à la demande de l'utilisateur ou quand un plugin doit y déposer un événement. Déclencheurs : « ajoute au calendrier », « qu'est-ce qu'il y a au calendrier », un plugin annonce un rendez-vous, l'onglet Calendrier du dashboard.",
+            "description": "Ajouter, lister, modifier ou supprimer des événements du calendrier partagé open-bot. OBLIGATOIRE dès que l'utilisateur mentionne un rendez-vous ou un événement daté (médecin, réunion, échéance…), même sans dire « calendrier » — un cron ou un rappel ne remplace jamais l'événement calendrier. Déclencheurs : « j'ai rendez-vous… », une date relative (« mercredi prochain »), « ajoute au calendrier », « qu'est-ce qu'il y a au calendrier », un plugin annonce un rendez-vous, l'onglet Calendrier du dashboard.",
             "body": read("skills/shared-calendar.md"),
         }
     ],
