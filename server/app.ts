@@ -103,7 +103,7 @@ function renduCal(): void {
     if (m2 < 0) { m2 = 11; y2--; } if (m2 > 11) { m2 = 0; y2++; }
     const iso = `${y2}-${pad(m2 + 1)}-${pad(d)}`;
     const ev = events.filter((e) => e.d1 <= iso && e.d2 >= iso);
-    const puces = ev.slice(0, 3).map((e) => `<div class="puce" title="${esc(e.titre)}"><i style="background:${esc(e.couleur)}"></i>${esc(e.titre)}</div>`).join("");
+    const puces = ev.slice(0, 3).map((e) => `<div class="puce" title="${esc(e.titre)}"><i style="background:${esc(e.couleur)}"></i><span class="puce-t">${esc(e.titre)}</span></div>`).join("");
     const plus = ev.length > 3 ? `<div class="plus">+${ev.length - 3} autres</div>` : "";
     const cls = "jour" + (autre ? " autre" : "") + (iso === auj ? " auj" : "") + (iso === jourSel ? " sel" : "");
     html += `<button class="${cls}" data-j="${iso}"><div class="num">${d}</div>${puces}${plus}</button>`;
